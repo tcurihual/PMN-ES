@@ -5,14 +5,17 @@ import "./index.css"
 import WebRouter from "./pages/router.tsx"
 import Layout from "./layouts/layout.tsx"
 import { TaskProvider } from "./contexts/TaskContext.tsx"
+import { ModalProvider } from "./contexts/ModalContext.tsx"
 
 createRoot(document.getElementById("root")!).render(
     <StrictMode>
         <TaskProvider>
             <BrowserRouter>
-                <Layout>
-                    <WebRouter />
-                </Layout>
+                <ModalProvider>
+                    <Layout>
+                        <WebRouter />
+                    </Layout>
+                </ModalProvider>
             </BrowserRouter>
         </TaskProvider>
     </StrictMode>

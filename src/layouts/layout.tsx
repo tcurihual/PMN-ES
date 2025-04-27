@@ -2,7 +2,6 @@ import React from "react"
 
 import { useNavigate } from "react-router-dom"
 import MenuData from "../components/MenuData"
-import { useTasks } from "../contexts/TaskContext"
 
 import { AiOutlinePlus } from "react-icons/ai"
 import { BsFillPersonFill } from "react-icons/bs"
@@ -10,6 +9,8 @@ import { BiHomeAlt } from "react-icons/bi"
 import { AiOutlineProduct } from "react-icons/ai"
 import { BsCalendarEvent } from "react-icons/bs"
 import { BsGear } from "react-icons/bs"
+import { useModal } from "../contexts/ModalContext"
+import CreateTaskModal from "../contexts/CreateTaskModal"
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const navigate = useNavigate()
@@ -18,7 +19,16 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         navigate(route)
     }
 
-    const { addTask } = useTasks()
+    const { showModal, hideModal } = useModal()
+
+    const handleShowModal = () => {
+        console.log("hoal")
+        showModal({
+            title: "Agregar Nueva Tarea",
+            size: "md",
+            component: <CreateTaskModal onClose={hideModal} />,
+        })
+    }
 
     return (
         <div style={{ display: "flex", flexDirection: "row", height: "100vh" }}>
@@ -138,7 +148,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         borderRadius: 15,
                         cursor: "pointer",
                     }}
-                    onClick={addTask}
+                    onClick={handleShowModal}
                 >
                     <div
                         style={{
