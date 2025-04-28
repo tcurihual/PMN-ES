@@ -13,6 +13,12 @@ export type Task = {
     magnitude: Magnitude
     difficulty: Difficulty
     createdAt: Date
+    assignedMemberId?: string
+}
+
+type SerializedTask = Omit<Task, "finishDate" | "createdAt"> & {
+    finishDate: string
+    createdAt: string
 }
 
 type TaskContextType = {
@@ -21,6 +27,10 @@ type TaskContextType = {
     clearTasks: () => void
     deleteTask: (id: string) => void
     toggleTask: (id: string) => void
+    editTask: (
+        id: string,
+        updatedFields: Partial<Omit<Task, "id" | "createdAt">>
+    ) => void
 }
 
 const TaskContext = createContext<TaskContextType>({
@@ -29,6 +39,7 @@ const TaskContext = createContext<TaskContextType>({
     clearTasks: () => {},
     deleteTask: () => {},
     toggleTask: () => {},
+    editTask: () => {},
 })
 
 export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -36,28 +47,59 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
     const [tasks, setTasks] = useState<Task[]>([])
 
-    // Cargar tareas al iniciar
     useEffect(() => {
         const savedTasks = localStorage.getItem("tasks")
         if (savedTasks) {
             try {
-                const parsedTasks = JSON.parse(savedTasks)
-                // Convertir strings de fecha a objetos Date
-                const tasksWithDates = parsedTasks.map((task: any) => ({
+                const parsedTasks: SerializedTask[] = JSON.parse(savedTasks)
+                const tasksWithDates = parsedTasks.map((task) => ({
                     ...task,
                     finishDate: new Date(task.finishDate),
                     createdAt: new Date(task.createdAt),
                 }))
+                if (
+                    tasksWithDates.some(
+                        (task) =>
+                            isNaN(task.finishDate.getTime()) ||
+                            tasksWithDates.some((task) =>
+                                isNaN(task.createdAt.getTime())
+                            )
+                    )
+                ) {
+                    throw new Error("Fechas inválidas en localStorage")
+                }
                 setTasks(tasksWithDates)
             } catch (error) {
-                console.error("Error parsing tasks", error)
+                console.error("Error cargando tareas:", error)
+                localStorage.removeItem("tasks")
+                setTasks([])
             }
         }
     }, [])
 
     // Guardar tareas cuando cambian
     useEffect(() => {
-        localStorage.setItem("tasks", JSON.stringify(tasks))
+        try {
+            const tasksToSave: SerializedTask[] = tasks.map((task) => ({
+                ...task,
+                finishDate: task.finishDate.toISOString(),
+                createdAt: task.createdAt.toISOString(),
+            }))
+            localStorage.setItem("tasks", JSON.stringify(tasksToSave))
+        } catch (error) {
+            console.error("Error guardando tareas:", error)
+        }
+    }, [tasks])
+
+    useEffect(() => {
+        if (tasks.length > 0) {
+            const tasksToSave: SerializedTask[] = tasks.map((task) => ({
+                ...task,
+                finishDate: task.finishDate?.toISOString(),
+                createdAt: task.createdAt?.toISOString(),
+            }))
+            localStorage.setItem("tasks", JSON.stringify(tasksToSave))
+        }
     }, [tasks])
 
     const addTask = (taskData: Omit<Task, "id" | "createdAt">) => {
@@ -65,8 +107,10 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({
             id: Date.now().toString(),
             ...taskData,
             createdAt: new Date(),
+            finishDate: taskData.finishDate,
+            assignedMemberId: taskData.assignedMemberId ?? undefined,
         }
-        setTasks([...tasks, newTask])
+        setTasks((prev) => [...prev, newTask])
     }
 
     const deleteTask = (id: string) => {
@@ -85,9 +129,36 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({
         setTasks([])
     }
 
+    const editTask = (
+        id: string,
+        updatedFields: Partial<Omit<Task, "id" | "createdAt">>
+    ) => {
+        setTasks((prevTasks) =>
+            prevTasks.map((task) => {
+                if (task.id === id) {
+                    return {
+                        ...task,
+                        ...updatedFields,
+                        finishDate: updatedFields.finishDate
+                            ? new Date(updatedFields.finishDate)
+                            : task.finishDate,
+                    }
+                }
+                return task
+            })
+        )
+    }
+
     return (
         <TaskContext.Provider
-            value={{ tasks, addTask, clearTasks, deleteTask, toggleTask }}
+            value={{
+                tasks,
+                addTask,
+                clearTasks,
+                deleteTask,
+                toggleTask,
+                editTask,
+            }}
         >
             {children}
         </TaskContext.Provider>

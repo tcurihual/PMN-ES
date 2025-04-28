@@ -1,23 +1,60 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useTasks } from "../contexts/TaskContext"
 
-const CreateTaskModal = ({ onClose }: { onClose: () => void }) => {
-    const { addTask } = useTasks()
-    const [formData, setFormData] = useState({
+type TaskFormData = {
+    name: string
+    description: string
+    finishDate: string
+    magnitude: "Importante" | "Trivial" | "No Trivial"
+    difficulty: "Dificil" | "Medio" | "Facil"
+}
+
+const CreateTaskModal = ({
+    onClose,
+    taskToEdit,
+}: {
+    onClose: () => void
+    taskToEdit?: any
+}) => {
+    const { addTask, editTask } = useTasks()
+    const [formData, setFormData] = useState<TaskFormData>({
         name: "",
         description: "",
         finishDate: "",
-        magnitude: "No Trivial" as "Importante" | "Trivial" | "No Trivial",
-        difficulty: "Medio" as "Dificil" | "Medio" | "Facil",
+        magnitude: "No Trivial",
+        difficulty: "Medio",
     })
+
+    useEffect(() => {
+        if (taskToEdit) {
+            setFormData({
+                name: taskToEdit.name,
+                description: taskToEdit.description,
+                finishDate: new Date(taskToEdit.finishDate)
+                    .toISOString()
+                    .split("T")[0],
+                magnitude: taskToEdit.magnitude,
+                difficulty: taskToEdit.difficulty,
+            })
+        }
+    }, [taskToEdit])
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        addTask({
-            ...formData,
-            finishDate: new Date(formData.finishDate),
-            completed: false,
-        })
+        const finalFinishDate = toLocalDate(formData.finishDate)
+
+        if (taskToEdit) {
+            editTask(taskToEdit.id, {
+                ...formData,
+                finishDate: finalFinishDate,
+            })
+        } else {
+            addTask({
+                ...formData,
+                finishDate: finalFinishDate,
+                completed: false,
+            })
+        }
         onClose()
     }
 
@@ -27,23 +64,20 @@ const CreateTaskModal = ({ onClose }: { onClose: () => void }) => {
         >
     ) => {
         const { name, value } = e.target
-        setFormData({
-            ...formData,
-            [name]: value,
-        })
+        setFormData((prev) => ({ ...prev, [name]: value }))
     }
 
-    // Estilo común para todos los inputs
     const inputStyle = {
         width: "100%",
         padding: "0.5rem",
         border: "1px solid #cccccc",
         borderRadius: "10px",
         outline: "none",
-        transition: "border-color 0.3s ease",
-        ":focus": {
-            borderColor: "#4B0082",
-        },
+    }
+
+    const toLocalDate = (dateString: string) => {
+        const [year, month, day] = dateString.split("-").map(Number)
+        return new Date(year, month - 1, day) // Mes empieza en 0
     }
 
     return (
@@ -58,13 +92,9 @@ const CreateTaskModal = ({ onClose }: { onClose: () => void }) => {
                 paddingRight: "5%",
             }}
         >
+            {/* Form Fields */}
             <div>
-                <label
-                    htmlFor="name"
-                    style={{ display: "block", marginBottom: "0.5rem" }}
-                >
-                    Nombre:
-                </label>
+                <label htmlFor="name">Nombre:</label>
                 <input
                     id="name"
                     name="name"
@@ -77,12 +107,7 @@ const CreateTaskModal = ({ onClose }: { onClose: () => void }) => {
             </div>
 
             <div>
-                <label
-                    htmlFor="description"
-                    style={{ display: "block", marginBottom: "0.5rem" }}
-                >
-                    Descripción:
-                </label>
+                <label htmlFor="description">Descripción:</label>
                 <textarea
                     id="description"
                     name="description"
@@ -97,12 +122,7 @@ const CreateTaskModal = ({ onClose }: { onClose: () => void }) => {
             </div>
 
             <div>
-                <label
-                    htmlFor="finishDate"
-                    style={{ display: "block", marginBottom: "0.5rem" }}
-                >
-                    Fecha de finalización:
-                </label>
+                <label htmlFor="finishDate">Fecha de finalización:</label>
                 <input
                     id="finishDate"
                     name="finishDate"
@@ -115,12 +135,7 @@ const CreateTaskModal = ({ onClose }: { onClose: () => void }) => {
             </div>
 
             <div>
-                <label
-                    htmlFor="magnitude"
-                    style={{ display: "block", marginBottom: "0.5rem" }}
-                >
-                    Magnitud:
-                </label>
+                <label htmlFor="magnitude">Magnitud:</label>
                 <select
                     id="magnitude"
                     name="magnitude"
@@ -135,12 +150,7 @@ const CreateTaskModal = ({ onClose }: { onClose: () => void }) => {
             </div>
 
             <div>
-                <label
-                    htmlFor="difficulty"
-                    style={{ display: "block", marginBottom: "0.5rem" }}
-                >
-                    Dificultad:
-                </label>
+                <label htmlFor="difficulty">Dificultad:</label>
                 <select
                     id="difficulty"
                     name="difficulty"
@@ -172,7 +182,6 @@ const CreateTaskModal = ({ onClose }: { onClose: () => void }) => {
                         border: "none",
                         borderRadius: "10px",
                         cursor: "pointer",
-                        transition: "background-color 0.3s ease",
                     }}
                 >
                     Cancelar
@@ -186,10 +195,9 @@ const CreateTaskModal = ({ onClose }: { onClose: () => void }) => {
                         border: "none",
                         borderRadius: "10px",
                         cursor: "pointer",
-                        transition: "background-color 0.3s ease",
                     }}
                 >
-                    Crear Tarea
+                    {taskToEdit ? "Actualizar" : "Crear"}
                 </button>
             </div>
         </form>

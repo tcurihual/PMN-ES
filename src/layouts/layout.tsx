@@ -10,7 +10,7 @@ import { AiOutlineProduct } from "react-icons/ai"
 import { BsCalendarEvent } from "react-icons/bs"
 import { BsGear } from "react-icons/bs"
 import { useModal } from "../contexts/ModalContext"
-import CreateTaskModal from "../contexts/CreateTaskModal"
+import CreateTaskModal from "../components/CreateTaskModal"
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const navigate = useNavigate()

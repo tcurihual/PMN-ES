@@ -1,155 +1,204 @@
 import { useTasks } from "../contexts/TaskContext"
-import { AgGridReact } from "ag-grid-react"
-import "ag-grid-community/styles/ag-grid.css"
-import "ag-grid-community/styles/ag-theme-alpine.css"
-import { ColDef, ICellRendererParams } from "ag-grid-community"
-import { useState, useMemo } from "react"
+import { useModal } from "../contexts/ModalContext"
+import { FiTrash2, FiEdit2 } from "react-icons/fi"
+import CreateTaskModal from "../components/CreateTaskModal"
+import { useMembers } from "../contexts/MemberContext"
 
 const Dashboard = () => {
-    const { tasks, clearTasks, deleteTask, toggleTask } = useTasks()
-    const [columnDefs] = useState<ColDef[]>([
-        {
-            field: "name",
-            headerName: "Nombre",
-            filter: true,
-            sortable: true,
-        },
-        {
-            field: "description",
-            headerName: "Descripción",
-            filter: true,
-            sortable: true,
-            width: 300,
-        },
-        {
-            field: "finishDate",
-            headerName: "Fecha Fin",
-            valueFormatter: (params) => params.value.toLocaleDateString(),
-            sortable: true,
-        },
-        {
-            field: "magnitude",
-            headerName: "Magnitud",
-            filter: true,
-            sortable: true,
-        },
-        {
-            field: "difficulty",
-            headerName: "Dificultad",
-            filter: true,
-            sortable: true,
-        },
-        {
-            field: "completed",
-            headerName: "Completada",
-            cellRenderer: (params: ICellRendererParams) =>
-                params.value ? "✅" : "❌",
-            filter: true,
-            sortable: true,
-        },
-        {
-            headerName: "Acciones",
-            cellRenderer: ActionsRenderer,
-            cellRendererParams: {
-                toggleTask,
-                deleteTask,
-            },
-            width: 200,
-        },
-    ])
+    const { tasks, deleteTask, toggleTask, editTask } = useTasks()
+    const { showModal, hideModal } = useModal()
+    const { members } = useMembers()
 
-    const defaultColDef = useMemo(
-        () => ({
-            flex: 1,
-            resizable: true,
-            filter: true,
-            sortable: true,
-        }),
-        []
-    )
+    const handleEditTaskModal = (task: any) => {
+        showModal({
+            title: "Editar Tarea",
+            size: "md",
+            component: (
+                <CreateTaskModal onClose={hideModal} taskToEdit={task} />
+            ),
+        })
+    }
+
+    const handleMagnitudeChange = (id: string, newMagnitude: string) => {
+        editTask(id, { magnitude: newMagnitude as any })
+    }
+
+    const handleDifficultyChange = (id: string, newDifficulty: string) => {
+        editTask(id, { difficulty: newDifficulty as any })
+    }
 
     return (
-        <div style={{ padding: "20px", height: "100%" }}>
-            <h1>Dashboard</h1>
+        <div
+            style={{
+                position: "absolute",
+                height: "100%",
+                width: "100%",
+                borderRadius: "10px",
+                padding: "5%",
+                boxSizing: "border-box",
+                display: "flex",
+                flexDirection: "column",
+            }}
+        >
+            <h1 style={{ fontSize: "28px", fontWeight: "bold" }}>DashBoard</h1>
             <div
-                className="ag-theme-alpine"
                 style={{
-                    height: "calc(100vh - 180px)",
-                    width: "100%",
-                    marginTop: "20px",
+                    display: "flex",
+                    flexDirection: "column",
+                    marginTop: "1%",
+                    gap: "5px",
+                    overflowY: "auto",
+                    maxHeight: "calc(100% - 50px)",
                 }}
             >
-                <AgGridReact
-                    rowData={tasks}
-                    columnDefs={columnDefs}
-                    defaultColDef={defaultColDef}
-                    animateRows={true}
-                    pagination={true}
-                    paginationPageSize={10}
-                />
-            </div>
-            {tasks.length > 0 && (
-                <button
-                    onClick={clearTasks}
+                <div
                     style={{
-                        cursor: "pointer",
-                        position: "absolute",
-                        bottom: "5%",
-                        width: "15%",
-                        height: "5%",
-                        left: "42.5%",
-                        backgroundColor: "#4B0082",
-                        borderRadius: 20,
-                        color: "#daddd3",
-                        fontSize: "20px",
+                        display: "flex",
+                        flexDirection: "row",
+                        backgroundColor: "lightgray",
+                        color: "black",
+                        padding: "10px",
+                        borderRadius: "5px",
+                        gap: "10px",
+                        alignItems: "center",
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 1,
                     }}
                 >
-                    Limpiar Todas las Tareas
-                </button>
-            )}
-        </div>
-    )
-}
+                    <div style={{ flex: 1, fontWeight: "bold" }}>Nombre</div>
+                    <div style={{ flex: 2, fontWeight: "bold" }}>
+                        Descripción
+                    </div>
+                    <div style={{ flex: 1, fontWeight: "bold" }}>Fecha Fin</div>
+                    <div style={{ flex: 1, fontWeight: "bold" }}>Magnitud</div>
+                    <div style={{ flex: 1, fontWeight: "bold" }}>
+                        Dificultad
+                    </div>
+                    <div style={{ flex: 1, fontWeight: "bold" }}>
+                        Asignado a
+                    </div>
+                    <div style={{ flex: 1, fontWeight: "bold" }}>
+                        Completado
+                    </div>
+                    <div style={{ flex: 1, fontWeight: "bold" }}>Acción</div>
+                </div>
 
-// Componente para renderizar acciones
-const ActionsRenderer = (
-    params: ICellRendererParams & {
-        toggleTask: (id: string) => void
-        deleteTask: (id: string) => void
-    }
-) => {
-    const taskId = params.data.id
+                {tasks.map((task) => (
+                    <div
+                        key={task.id}
+                        style={{
+                            display: "flex",
+                            flexDirection: "row",
+                            backgroundColor: task.completed
+                                ? "#a0a0a0"
+                                : "#ffffff",
+                            padding: "10px",
+                            borderRadius: "5px",
+                            gap: "10px",
+                            alignItems: "center",
+                        }}
+                    >
+                        <div style={{ flex: 1 }}>{task.name}</div>
+                        <div
+                            style={{
+                                flex: 2,
+                                maxHeight: "100px",
+                                overflowY: "auto",
+                                padding: "5px",
+                            }}
+                        >
+                            {task.description}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            {task.finishDate.toLocaleDateString()}
+                        </div>
 
-    return (
-        <div style={{ display: "flex", gap: "10px" }}>
-            <button
-                onClick={() => params.toggleTask(taskId)}
-                style={{
-                    padding: "5px 10px",
-                    backgroundColor: params.data.completed
-                        ? "#FFA500"
-                        : "#4CAF50",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "3px",
-                    cursor: "pointer",
-                }}
-            >
-                {params.data.completed ? "Reactivar" : "Completar"}
-            </button>
-            <button
-                onClick={() => params.deleteTask(taskId)}
-                style={{
-                    padding: "5px 10px",
-                    backgroundColor: "#f44336",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "3px",
-                    cursor: "pointer",
-                }}
-            >
-                Eliminar
-            </button>
+                        <div style={{ flex: 1 }}>
+                            <select
+                                value={task.magnitude}
+                                onChange={(e) =>
+                                    handleMagnitudeChange(
+                                        task.id,
+                                        e.target.value
+                                    )
+                                }
+                            >
+                                <option value="Importante">Importante</option>
+                                <option value="Trivial">Trivial</option>
+                                <option value="No Trivial">No Trivial</option>
+                            </select>
+                        </div>
+
+                        <div style={{ flex: 1 }}>
+                            <select
+                                value={task.difficulty}
+                                onChange={(e) =>
+                                    handleDifficultyChange(
+                                        task.id,
+                                        e.target.value
+                                    )
+                                }
+                            >
+                                <option value="Dificil">Difícil</option>
+                                <option value="Medio">Medio</option>
+                                <option value="Facil">Fácil</option>
+                            </select>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <select
+                                value={task.assignedMemberId ?? ""}
+                                onChange={(e) =>
+                                    editTask(task.id, {
+                                        assignedMemberId: e.target.value,
+                                    })
+                                }
+                            >
+                                <option value="">Sin asignar</option>
+                                {members.map((member) => (
+                                    <option key={member.id} value={member.id}>
+                                        {member.firstName} {member.lastName}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div style={{ flex: 1 }}>
+                            <input
+                                type="checkbox"
+                                style={{ width: "10px", height: "10px" }}
+                                checked={task.completed}
+                                onChange={() => toggleTask(task.id)}
+                            />
+                        </div>
+                        <div
+                            style={{
+                                flex: 1,
+                                display: "flex",
+                                justifyContent: "space-between",
+                            }}
+                        >
+                            <button onClick={() => handleEditTaskModal(task)}>
+                                <FiEdit2
+                                    style={{
+                                        width: "24px",
+                                        height: "24px",
+                                    }}
+                                />
+                            </button>
+                            <button onClick={() => deleteTask(task.id)}>
+                                <FiTrash2
+                                    color="red"
+                                    style={{
+                                        width: "24px",
+                                        height: "24px",
+                                    }}
+                                />
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     )
 }

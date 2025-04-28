@@ -6,17 +6,20 @@ import WebRouter from "./pages/router.tsx"
 import Layout from "./layouts/layout.tsx"
 import { TaskProvider } from "./contexts/TaskContext.tsx"
 import { ModalProvider } from "./contexts/ModalContext.tsx"
+import { MemberProvider } from "./contexts/MemberContext.tsx"
 
 createRoot(document.getElementById("root")!).render(
     <StrictMode>
         <TaskProvider>
-            <BrowserRouter>
-                <ModalProvider>
-                    <Layout>
-                        <WebRouter />
-                    </Layout>
-                </ModalProvider>
-            </BrowserRouter>
+            <MemberProvider>
+                <BrowserRouter>
+                    <ModalProvider>
+                        <Layout>
+                            <WebRouter />
+                        </Layout>
+                    </ModalProvider>
+                </BrowserRouter>
+            </MemberProvider>
         </TaskProvider>
     </StrictMode>
 )
