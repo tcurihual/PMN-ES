@@ -1,0 +1,15 @@
+[package]
+name = "backend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.8.1"
+shuttle-axum = "0.53.0"
+shuttle-runtime = "0.53.0"
+tokio = "1.28.2"
+sqlx = { version = "0.8.2", features = [
+    "postgres",
+    "runtime-tokio-native-tls",
+] }
+shuttle-shared-db = { version = "0.53.0", features = ["postgres"] }
