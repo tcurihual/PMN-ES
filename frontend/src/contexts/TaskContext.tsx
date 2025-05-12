@@ -55,7 +55,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    const API_URL = import.meta.env.API_URL || "http://localhost:8000"
+    const API_URL = "https://backend-9hwu.shuttle.app"
 
     const fetchTasks = useCallback(async () => {
         setLoading(true)
