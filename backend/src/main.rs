@@ -15,12 +15,17 @@ pub struct AppState {
 
 #[shuttle_runtime::main]
 async fn main(#[shuttle_shared_db::Postgres] pool: PgPool) -> shuttle_axum::ShuttleAxum {
+    sqlx::migrate!()
+        .run(&pool)
+        .await
+        .expect("Failed to run database migrations");
+
     let state = AppState { pool };
 
     let cors = CorsLayer::new()
-        .allow_origin(Any) // Permite cualquier origen (en desarrollo)
-        .allow_methods(Any) // Permite todos los métodos HTTP
-        .allow_headers(Any); // Permite todos los headers
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
 
     let router = Router::new().merge(routes::router()).layer(cors);
 
