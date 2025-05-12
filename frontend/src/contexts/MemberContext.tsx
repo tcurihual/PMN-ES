@@ -8,7 +8,7 @@ type Member = {
     lastName: string
     email: string
     age: number
-    taskIds: string[]
+    taskIds: number[]
     color: string
 }
 
