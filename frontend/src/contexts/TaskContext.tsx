@@ -1,11 +1,16 @@
-// contexts/TaskContext.tsx
-import React, { createContext, useState, useContext, useEffect } from "react"
+import React, {
+    createContext,
+    useState,
+    useContext,
+    useEffect,
+    useCallback,
+} from "react"
 
-type Magnitude = "Importante" | "Trivial" | "No Trivial"
-type Difficulty = "Dificil" | "Medio" | "Facil"
+export type Magnitude = "NotTrivial" | "Trivial" | "Important"
+export type Difficulty = "Easy" | "Medium" | "Hard"
 
 export type Task = {
-    id: string
+    id: number
     name: string
     description: string
     finishDate: Date
@@ -16,148 +21,249 @@ export type Task = {
     assignedMemberId?: string
 }
 
-type SerializedTask = Omit<Task, "finishDate" | "createdAt"> & {
-    finishDate: string
-    createdAt: string
-}
-
 type TaskContextType = {
     tasks: Task[]
-    addTask: (task: Omit<Task, "id" | "createdAt">) => void
-    clearTasks: () => void
-    deleteTask: (id: string) => void
-    toggleTask: (id: string) => void
+    loading: boolean
+    error: string | null
+    addTask: (task: Omit<Task, "id" | "createdAt">) => Promise<void>
+    clearTasks: () => Promise<void>
+    deleteTask: (id: number) => Promise<void>
+    toggleTask: (id: number) => Promise<void>
     editTask: (
-        id: string,
+        id: number,
         updatedFields: Partial<Omit<Task, "id" | "createdAt">>
-    ) => void
+    ) => Promise<void>
+    fetchTasks: () => Promise<void>
 }
 
 const TaskContext = createContext<TaskContextType>({
     tasks: [],
-    addTask: () => {},
-    clearTasks: () => {},
-    deleteTask: () => {},
-    toggleTask: () => {},
-    editTask: () => {},
+    loading: false,
+    error: null,
+    addTask: async () => {},
+    clearTasks: async () => {},
+    deleteTask: async () => {},
+    toggleTask: async () => {},
+    editTask: async () => {},
+    fetchTasks: async () => {},
 })
 
 export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({
     children,
 }) => {
     const [tasks, setTasks] = useState<Task[]>([])
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
-    useEffect(() => {
-        const savedTasks = localStorage.getItem("tasks")
-        if (savedTasks) {
-            try {
-                const parsedTasks: SerializedTask[] = JSON.parse(savedTasks)
-                const tasksWithDates = parsedTasks.map((task) => ({
-                    ...task,
-                    finishDate: new Date(task.finishDate),
-                    createdAt: new Date(task.createdAt),
-                }))
-                if (
-                    tasksWithDates.some(
-                        (task) =>
-                            isNaN(task.finishDate.getTime()) ||
-                            tasksWithDates.some((task) =>
-                                isNaN(task.createdAt.getTime())
-                            )
-                    )
-                ) {
-                    throw new Error("Fechas inválidas en localStorage")
-                }
-                setTasks(tasksWithDates)
-            } catch (error) {
-                console.error("Error cargando tareas:", error)
-                localStorage.removeItem("tasks")
-                setTasks([])
-            }
-        }
-    }, [])
+    const API_URL = import.meta.env.API_URL || "http://localhost:8000"
 
-    // Guardar tareas cuando cambian
-    useEffect(() => {
+    const fetchTasks = useCallback(async () => {
+        setLoading(true)
+        setError(null)
         try {
-            const tasksToSave: SerializedTask[] = tasks.map((task) => ({
+            const response = await fetch(`${API_URL}/tasks`)
+            if (!response.ok) {
+                throw new Error(`Error: ${response.status}`)
+            }
+            const data = await response.json()
+
+            const formattedTasks = data.map((task: any) => ({
                 ...task,
-                finishDate: task.finishDate.toISOString(),
-                createdAt: task.createdAt.toISOString(),
+                id: task.id,
+                finishDate: new Date(task.finish_date),
+                createdAt: new Date(task.created_at),
+                assignedMemberId: task.assigned_member_id || undefined,
             }))
-            localStorage.setItem("tasks", JSON.stringify(tasksToSave))
-        } catch (error) {
-            console.error("Error guardando tareas:", error)
+
+            setTasks(formattedTasks)
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Error desconocido")
+            console.error("Error fetching tasks:", err)
+        } finally {
+            setLoading(false)
         }
-    }, [tasks])
+    }, [API_URL])
 
     useEffect(() => {
-        if (tasks.length > 0) {
-            const tasksToSave: SerializedTask[] = tasks.map((task) => ({
-                ...task,
-                finishDate: task.finishDate?.toISOString(),
-                createdAt: task.createdAt?.toISOString(),
-            }))
-            localStorage.setItem("tasks", JSON.stringify(tasksToSave))
-        }
-    }, [tasks])
+        fetchTasks()
+    }, [fetchTasks])
 
-    const addTask = (taskData: Omit<Task, "id" | "createdAt">) => {
-        const newTask: Task = {
-            id: Date.now().toString(),
-            ...taskData,
-            createdAt: new Date(),
-            finishDate: taskData.finishDate,
-            assignedMemberId: taskData.assignedMemberId ?? undefined,
-        }
-        setTasks((prev) => [...prev, newTask])
-    }
+    const addTask = async (taskData: Omit<Task, "id" | "createdAt">) => {
+        setLoading(true)
+        try {
+            const response = await fetch(`${API_URL}/tasks`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    name: taskData.name,
+                    description: taskData.description,
+                    finish_date: taskData.finishDate.toISOString(),
+                    completed: taskData.completed,
+                    magnitude: taskData.magnitude,
+                    difficulty: taskData.difficulty,
+                    assigned_member_id: taskData.assignedMemberId,
+                }),
+            })
 
-    const deleteTask = (id: string) => {
-        setTasks(tasks.filter((task) => task.id !== id))
-    }
+            if (!response.ok) {
+                throw new Error(`Error: ${response.status}`)
+            }
 
-    const toggleTask = (id: string) => {
-        setTasks(
-            tasks.map((task) =>
-                task.id === id ? { ...task, completed: !task.completed } : task
+            await fetchTasks()
+        } catch (err) {
+            setError(
+                err instanceof Error ? err.message : "Error al agregar tarea"
             )
-        )
+            console.error("Error adding task:", err)
+        } finally {
+            setLoading(false)
+        }
     }
 
-    const clearTasks = () => {
-        setTasks([])
+    const deleteTask = async (id: number) => {
+        setLoading(true)
+        try {
+            const response = await fetch(`${API_URL}/tasks/${id}`, {
+                method: "DELETE",
+            })
+
+            if (!response.ok) {
+                throw new Error(`Error: ${response.status}`)
+            }
+
+            setTasks((prev) => prev.filter((task) => task.id !== id))
+        } catch (err) {
+            setError(
+                err instanceof Error ? err.message : "Error al eliminar tarea"
+            )
+            console.error("Error deleting task:", err)
+        } finally {
+            setLoading(false)
+        }
     }
 
-    const editTask = (
-        id: string,
+    const toggleTask = async (id: number) => {
+        setLoading(true)
+        try {
+            const taskToUpdate = tasks.find((task) => task.id === id)
+            if (!taskToUpdate) throw new Error("Tarea no encontrada")
+
+            const response = await fetch(`${API_URL}/tasks/${id}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    name: taskToUpdate.name,
+                    description: taskToUpdate.description,
+                    finish_date: taskToUpdate.finishDate.toISOString(),
+                    completed: !taskToUpdate.completed,
+                    magnitude: taskToUpdate.magnitude,
+                    difficulty: taskToUpdate.difficulty,
+                    assigned_member_id: taskToUpdate.assignedMemberId,
+                }),
+            })
+
+            if (!response.ok) {
+                throw new Error(`Error: ${response.status}`)
+            }
+            await fetchTasks()
+        } catch (err) {
+            setError(
+                err instanceof Error ? err.message : "Error al actualizar tarea"
+            )
+            console.error("Error toggling task:", err)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const editTask = async (
+        id: number,
         updatedFields: Partial<Omit<Task, "id" | "createdAt">>
     ) => {
-        setTasks((prevTasks) =>
-            prevTasks.map((task) => {
-                if (task.id === id) {
-                    return {
-                        ...task,
-                        ...updatedFields,
-                        finishDate: updatedFields.finishDate
-                            ? new Date(updatedFields.finishDate)
-                            : task.finishDate,
-                    }
-                }
-                return task
+        setLoading(true)
+        try {
+            const taskToUpdate = tasks.find((task) => task.id === id)
+            if (!taskToUpdate) throw new Error("Tarea no encontrada")
+            console.log(taskToUpdate)
+            const response = await fetch(`${API_URL}/tasks/${id}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    name: updatedFields.name ?? taskToUpdate.name,
+                    description:
+                        updatedFields.description ?? taskToUpdate.description,
+                    finish_date: updatedFields.finishDate
+                        ? updatedFields.finishDate.toISOString()
+                        : taskToUpdate.finishDate.toISOString(),
+                    completed:
+                        updatedFields.completed ?? taskToUpdate.completed,
+                    magnitude:
+                        updatedFields.magnitude ?? taskToUpdate.magnitude,
+                    difficulty:
+                        updatedFields.difficulty ?? taskToUpdate.difficulty,
+                    assigned_member_id:
+                        updatedFields.assignedMemberId ??
+                        taskToUpdate.assignedMemberId,
+                }),
             })
-        )
+
+            if (!response.ok) {
+                throw new Error(`Error: ${response.status}`)
+            }
+            console.log("god")
+            await fetchTasks()
+        } catch (err) {
+            setError(
+                err instanceof Error ? err.message : "Error al editar tarea"
+            )
+            console.error("Error editing task:", err)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const clearTasks = async () => {
+        setLoading(true)
+        try {
+            // Esto debería ser una operación en el backend que elimine todas las tareas
+            // Asumiendo que tienes un endpoint DELETE /tasks
+            const response = await fetch(`${API_URL}/tasks`, {
+                method: "DELETE",
+            })
+
+            if (!response.ok) {
+                throw new Error(`Error: ${response.status}`)
+            }
+
+            setTasks([])
+        } catch (err) {
+            setError(
+                err instanceof Error ? err.message : "Error al limpiar tareas"
+            )
+            console.error("Error clearing tasks:", err)
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
         <TaskContext.Provider
             value={{
                 tasks,
+                loading,
+                error,
                 addTask,
                 clearTasks,
                 deleteTask,
                 toggleTask,
                 editTask,
+                fetchTasks,
             }}
         >
             {children}
