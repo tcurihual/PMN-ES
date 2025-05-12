@@ -1,15 +1,21 @@
-import { useTasks } from "../contexts/TaskContext"
+import { Task, useTasks } from "../contexts/TaskContext"
 import { useModal } from "../contexts/ModalContext"
 import { FiTrash2, FiEdit2 } from "react-icons/fi"
 import CreateTaskModal from "../components/CreateTaskModal"
 import { useMembers } from "../contexts/MemberContext"
+import {
+    translateDifficultyToBackend,
+    translateDifficultyToFrontend,
+    translateMagnitudeToBackend,
+    translateMagnitudeToFrontend,
+} from "../utils/translator"
 
 const Dashboard = () => {
     const { tasks, deleteTask, toggleTask, editTask } = useTasks()
     const { showModal, hideModal } = useModal()
     const { members } = useMembers()
 
-    const handleEditTaskModal = (task: any) => {
+    const handleEditTaskModal = (task: Task) => {
         showModal({
             title: "Editar Tarea",
             size: "md",
@@ -19,12 +25,14 @@ const Dashboard = () => {
         })
     }
 
-    const handleMagnitudeChange = (id: string, newMagnitude: string) => {
-        editTask(id, { magnitude: newMagnitude as any })
+    const handleMagnitudeChange = (id: number, newMagnitude: string) => {
+        const translatedValue = translateMagnitudeToBackend(newMagnitude)
+        editTask(id, { magnitude: translatedValue })
     }
 
-    const handleDifficultyChange = (id: string, newDifficulty: string) => {
-        editTask(id, { difficulty: newDifficulty as any })
+    const handleDifficultyChange = (id: number, newDifficulty: string) => {
+        const translatedValue = translateDifficultyToBackend(newDifficulty)
+        editTask(id, { difficulty: translatedValue })
     }
 
     return (
@@ -116,7 +124,9 @@ const Dashboard = () => {
 
                         <div style={{ flex: 1 }}>
                             <select
-                                value={task.magnitude}
+                                value={translateMagnitudeToFrontend(
+                                    task.magnitude
+                                )}
                                 onChange={(e) =>
                                     handleMagnitudeChange(
                                         task.id,
@@ -132,7 +142,9 @@ const Dashboard = () => {
 
                         <div style={{ flex: 1 }}>
                             <select
-                                value={task.difficulty}
+                                value={translateDifficultyToFrontend(
+                                    task.difficulty
+                                )}
                                 onChange={(e) =>
                                     handleDifficultyChange(
                                         task.id,
@@ -140,9 +152,9 @@ const Dashboard = () => {
                                     )
                                 }
                             >
-                                <option value="Dificil">Difícil</option>
+                                <option value="Difícil">Difícil</option>
                                 <option value="Medio">Medio</option>
-                                <option value="Facil">Fácil</option>
+                                <option value="Fácil">Fácil</option>
                             </select>
                         </div>
                         <div style={{ flex: 1 }}>
@@ -183,6 +195,7 @@ const Dashboard = () => {
                                     style={{
                                         width: "24px",
                                         height: "24px",
+                                        cursor: "pointer",
                                     }}
                                 />
                             </button>
@@ -192,6 +205,7 @@ const Dashboard = () => {
                                     style={{
                                         width: "24px",
                                         height: "24px",
+                                        cursor: "pointer",
                                     }}
                                 />
                             </button>

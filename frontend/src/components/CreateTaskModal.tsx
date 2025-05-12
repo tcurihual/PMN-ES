@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from "react"
 import { useTasks } from "../contexts/TaskContext"
+import {
+    translateDifficultyToBackend,
+    translateDifficultyToFrontend,
+    translateMagnitudeToBackend,
+    translateMagnitudeToFrontend,
+} from "../utils/translator"
+
+type FormMagnitude = "Importante" | "Trivial" | "No Trivial"
+type FormDifficulty = "Difícil" | "Medio" | "Fácil"
 
 type TaskFormData = {
     name: string
     description: string
     finishDate: string
-    magnitude: "Importante" | "Trivial" | "No Trivial"
-    difficulty: "Dificil" | "Medio" | "Facil"
+    magnitude: FormMagnitude
+    difficulty: FormDifficulty
+    assignedMemberId?: string
 }
 
 const CreateTaskModal = ({
@@ -33,29 +43,49 @@ const CreateTaskModal = ({
                 finishDate: new Date(taskToEdit.finishDate)
                     .toISOString()
                     .split("T")[0],
-                magnitude: taskToEdit.magnitude,
-                difficulty: taskToEdit.difficulty,
+                magnitude: translateMagnitudeToFrontend(
+                    taskToEdit.magnitude
+                ) as FormMagnitude,
+                difficulty: translateDifficultyToFrontend(
+                    taskToEdit.difficulty
+                ) as FormDifficulty,
             })
         }
     }, [taskToEdit])
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        const finalFinishDate = toLocalDate(formData.finishDate)
+        const finalFinishDate = new Date(formData.finishDate)
 
-        if (taskToEdit) {
-            editTask(taskToEdit.id, {
-                ...formData,
-                finishDate: finalFinishDate,
-            })
-        } else {
-            addTask({
-                ...formData,
-                finishDate: finalFinishDate,
-                completed: false,
-            })
+        try {
+            if (taskToEdit) {
+                await editTask(taskToEdit.id, {
+                    name: formData.name,
+                    description: formData.description,
+                    finishDate: finalFinishDate,
+                    magnitude: translateMagnitudeToBackend(formData.magnitude),
+                    difficulty: translateDifficultyToBackend(
+                        formData.difficulty
+                    ),
+                    assignedMemberId: formData.assignedMemberId,
+                })
+            } else {
+                await addTask({
+                    name: formData.name,
+                    description: formData.description,
+                    finishDate: finalFinishDate,
+                    magnitude: translateMagnitudeToBackend(formData.magnitude),
+                    difficulty: translateDifficultyToBackend(
+                        formData.difficulty
+                    ),
+                    completed: false,
+                    assignedMemberId: formData.assignedMemberId,
+                })
+            }
+            onClose()
+        } catch (error) {
+            console.error("Error al guardar la tarea:", error)
         }
-        onClose()
     }
 
     const handleChange = (
@@ -75,10 +105,10 @@ const CreateTaskModal = ({
         outline: "none",
     }
 
-    const toLocalDate = (dateString: string) => {
-        const [year, month, day] = dateString.split("-").map(Number)
-        return new Date(year, month - 1, day) // Mes empieza en 0
-    }
+    // const toLocalDate = (dateString: string) => {
+    //     const [year, month, day] = dateString.split("-").map(Number)
+    //     return new Date(year, month - 1, day) // Mes empieza en 0
+    // }
 
     return (
         <form
@@ -92,7 +122,6 @@ const CreateTaskModal = ({
                 paddingRight: "5%",
             }}
         >
-            {/* Form Fields */}
             <div>
                 <label htmlFor="name">Nombre:</label>
                 <input
@@ -158,9 +187,9 @@ const CreateTaskModal = ({
                     onChange={handleChange}
                     style={inputStyle}
                 >
-                    <option value="Dificil">Difícil</option>
+                    <option value="Difícil">Difícil</option>
                     <option value="Medio">Medio</option>
-                    <option value="Facil">Fácil</option>
+                    <option value="Fácil">Fácil</option>
                 </select>
             </div>
 
